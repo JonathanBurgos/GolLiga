@@ -53,6 +53,13 @@ export class InsightsService {
     const fairPlay = new Map<string, { teamId: string; team: string; yellow: number; red: number; fouls: number; points: number }>();
     const suspensions: Array<Record<string, unknown>> = [];
 
+    for (const team of await this.teams.findByTournament(tournamentId)) {
+      table.set(team.id, {
+        teamId: team.id, team: team.name, group: team.groupName, played: 0, won: 0, drawn: 0,
+        lost: 0, goalsFor: 0, goalsAgainst: 0, fairPlayPoints: 0,
+      });
+    }
+
     for (const match of all) {
       for (const side of [match.homeTeam, match.awayTeam]) {
         if (!table.has(side.id)) table.set(side.id, {

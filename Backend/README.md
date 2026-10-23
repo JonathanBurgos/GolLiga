@@ -33,9 +33,17 @@ La instancia local guarda sus datos en `.local-postgres-data/` (ignorada por Git
 
 La API escucha en `http://localhost:3000/api/v1`; documentación en `http://localhost:3000/docs` y estado en `http://localhost:3000/api/v1/health`.
 
+Configura `CLOUDINARY_URL` en `.env` con las credenciales de una cuenta Cloudinary. El endpoint autenticado `POST /api/v1/teams/crest` recibe el archivo multipart en el campo `crest`; admite PNG y SVG de hasta 2 GB, los convierte a WebP y los optimiza a un máximo de 150 KB antes de subirlos. La respuesta incluye `url`, que el formulario guarda en `crestUrl` del equipo. Mantén la URL de Cloudinary únicamente en variables de entorno y nunca la publiques en Git.
+
 Las cuentas demo quedan configuradas en `.env.example`: `admin@golliga.local` y `gestor@golliga.local`, ambas con contraseña `ChangeMe_123!`. Cambia las contraseñas antes de exponer el servicio fuera de tu entorno local. El seed actualiza la contraseña de estas cuentas cada vez que se ejecuta.
 
 ## API
+
+El listado `GET /tournaments/:id/teams` incluye `activePlayerCount` (jugadores activos). La clasificación incluye a todos los equipos inscritos aunque todavía no hayan disputado partidos; sus estadísticas comienzan en cero.
+
+Para crear cuentas adicionales después de la inicialización, configura temporalmente `NEW_ADMIN_EMAIL`, `NEW_ADMIN_PASSWORD` (mínimo 16 caracteres) y `NEW_ADMIN_NAME`, y ejecuta `npm run prisma:create-admin`. El script guarda la contraseña con bcrypt y no modifica cuentas existentes. El esquema de roles y permisos ya está en la migración `20261023000000_rbac_and_remove_demo_seed`; la migración de bootstrap de abajo solo configura las dos cuentas iniciales solicitadas.
+
+La migración `20261023020000_bootstrap_admin_manager` crea las cuentas iniciales `admin.plataforma@golliga.local` (Administrador) y `gestor.plataforma@golliga.local` (Gestor), con contraseñas bcrypt. Tras aplicarla, cambia ambas contraseñas desde un entorno seguro; las claves iniciales se entregan al operador y no se guardan en texto plano en la migración.
 
 Las rutas `GET` del torneo son públicas para que el sitio pueda mostrar el contenido del torneo seleccionado. Las operaciones de escritura requieren `Authorization: Bearer <accessToken>`. `POST /api/v1/auth/login` y `GET /api/v1/health` también son públicos.
 
@@ -81,4 +89,3 @@ El esquema y su migración inicial están en `prisma/schema.prisma` y `prisma/mi
 - `ValidationPipe` elimina campos no declarados y rechaza payloads desconocidos.
 - Helmet, CORS explícito, rate limit y respuestas de error estables vienen habilitados.
 - La base de datos de ejemplo está pensada para desarrollo. En producción se debe configurar backup, TLS, rotación de secretos, logging estructurado y despliegue de migraciones como paso de release.
-

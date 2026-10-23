@@ -1,0 +1,13 @@
+@if(request$|async;as request){
+  <div class="backdrop" (click)="close(false)">
+    <section class="dialog" role="alertdialog" aria-modal="true" aria-labelledby="confirm-title" aria-describedby="confirm-message" (click)="$event.stopPropagation()">
+      <span class="symbol" [class.success]="request.tone==='success'" aria-hidden="true">{{request.tone==='success'?'✓':'⌑'}}</span>
+      <h2 id="confirm-title">{{request.title}}</h2>
+      <p id="confirm-message">{{request.message}}</p>
+      <footer>
+        <button type="button" class="cancel" (click)="close(false)">Cancelar</button>
+        <button type="button" class="confirm" [class.success]="request.tone==='success'" (click)="close(true)">{{request.confirmLabel||'Confirmar'}}</button>
+      </footer>
+    </section>
+  </div>
+}

@@ -12,7 +12,8 @@ export class TeamService {
   }
   async list(tournamentId: string) {
     if (!(await this.tournaments.findById(tournamentId))) throw new NotFoundError('El torneo');
-    return this.teams.findByTournament(tournamentId);
+    const teams = await this.teams.findByTournament(tournamentId);
+    return teams.map((team) => ({ ...team, activePlayerCount: team.players?.length ?? 0 }));
   }
   async create(input: { tournamentId: string; name: string; shortName: string; groupName: string; crestUrl?: string; primaryColor?: string; secondaryColor?: string; enrollmentStatus?: string; delegateName?: string; delegatePhone?: string; delegateEmail?: string; registeredAt?: Date }) {
     if (!(await this.tournaments.findById(input.tournamentId))) throw new NotFoundError('El torneo');

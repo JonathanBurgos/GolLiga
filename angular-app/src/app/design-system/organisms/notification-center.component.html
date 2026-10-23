@@ -1,0 +1,9 @@
+<section class="notifications" aria-label="Notificaciones" aria-live="polite" aria-relevant="additions">
+  @for(item of (items$|async)??[];track item.id){
+    <article class="notification" [class]="item.type" [attr.role]="item.type==='error'?'alert':'status'">
+      <span class="icon" aria-hidden="true">{{item.type==='success'?'✓':item.type==='error'?'×':item.type==='warning'?'!':'i'}}</span>
+      <span class="copy"><strong>{{item.title}}</strong><small>{{item.message}}</small></span>
+      <button type="button" [attr.aria-label]="'Cerrar notificación: '+item.title" (click)="dismiss(item.id)">×</button>
+    </article>
+  }
+</section>

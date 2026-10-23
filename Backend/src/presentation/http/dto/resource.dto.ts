@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsPhoneNumber, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateTournamentDto {
   @ApiProperty({ example: 'Copa Aficionados' }) @IsString() @MinLength(3) @MaxLength(100) name!: string;
@@ -20,12 +20,12 @@ export class CreateTeamDto {
   @ApiProperty() @IsString() @MinLength(2) @MaxLength(80) name!: string;
   @ApiProperty({ example: 'LEO' }) @IsString() @MinLength(2) @MaxLength(5) shortName!: string;
   @ApiProperty({ example: 'Grupo A' }) @IsString() @MinLength(1) @MaxLength(40) groupName!: string;
-  @ApiPropertyOptional({ description: 'URL o imagen PNG/SVG en data URL; máximo 1 MB.' }) @IsOptional() @IsString() @MaxLength(1_400_000) crestUrl?: string;
+  @ApiPropertyOptional({ description: 'URL del escudo almacenado en Cloudinary.' }) @IsOptional() @IsUrl({ require_protocol: true }) @MaxLength(2048) crestUrl?: string;
   @ApiPropertyOptional() @IsOptional() @Matches(/^#[\da-fA-F]{6}$/) primaryColor?: string;
   @ApiPropertyOptional() @IsOptional() @Matches(/^#[\da-fA-F]{6}$/) secondaryColor?: string;
   @ApiPropertyOptional({ enum: ['PENDING', 'CONFIRMED'] }) @IsOptional() @IsIn(['PENDING', 'CONFIRMED']) enrollmentStatus?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) delegateName?: string;
-  @ApiPropertyOptional() @IsOptional() @IsPhoneNumber() delegatePhone?: string;
+  @ApiPropertyOptional() @IsOptional() @Matches(/^\+?[\d\s()-]{7,18}$/) delegatePhone?: string;
   @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(120) delegateEmail?: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() registeredAt?: string;
 }
@@ -33,13 +33,13 @@ export class UpdateTeamDto {
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(2) @MaxLength(80) name?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(2) @MaxLength(5) shortName?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MinLength(1) @MaxLength(40) groupName?: string;
-  @ApiPropertyOptional({ description: 'URL o imagen PNG/SVG en data URL; máximo 1 MB.' }) @IsOptional() @IsString() @MaxLength(1_400_000) crestUrl?: string;
+  @ApiPropertyOptional({ description: 'URL del escudo almacenado en Cloudinary.' }) @IsOptional() @IsUrl({ require_protocol: true }) @MaxLength(2048) crestUrl?: string;
   @ApiPropertyOptional({ enum: ['ACTIVE', 'INACTIVE'] }) @IsOptional() @IsIn(['ACTIVE', 'INACTIVE']) status?: string;
   @ApiPropertyOptional() @IsOptional() @Matches(/^#[\da-fA-F]{6}$/) primaryColor?: string;
   @ApiPropertyOptional() @IsOptional() @Matches(/^#[\da-fA-F]{6}$/) secondaryColor?: string;
   @ApiPropertyOptional({ enum: ['PENDING', 'CONFIRMED'] }) @IsOptional() @IsIn(['PENDING', 'CONFIRMED']) enrollmentStatus?: string;
   @ApiPropertyOptional() @IsOptional() @IsString() @MaxLength(100) delegateName?: string;
-  @ApiPropertyOptional() @IsOptional() @IsPhoneNumber() delegatePhone?: string;
+  @ApiPropertyOptional() @IsOptional() @Matches(/^\+?[\d\s()-]{7,18}$/) delegatePhone?: string;
   @ApiPropertyOptional() @IsOptional() @IsEmail() @MaxLength(120) delegateEmail?: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() registeredAt?: string;
 }

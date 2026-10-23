@@ -23,7 +23,13 @@ export class PrismaTournamentRepository implements TournamentRepository {
 @Injectable()
 export class PrismaTeamRepository implements TeamRepository {
   constructor(private readonly prisma: PrismaService) {}
-  findByTournament(tournamentId: string) { return this.prisma.team.findMany({ where: { tournamentId }, include: { players: true }, orderBy: [{ groupName: 'asc' }, { name: 'asc' }] }); }
+  findByTournament(tournamentId: string) {
+    return this.prisma.team.findMany({
+      where: { tournamentId },
+      include: { players: { where: { status: 'ACTIVE' }, select: { id: true } } },
+      orderBy: [{ groupName: 'asc' }, { name: 'asc' }],
+    });
+  }
   findById(id: string) { return this.prisma.team.findUnique({ where: { id }, include: { players: true } }); }
   create(input: { tournamentId: string; name: string; shortName: string; groupName: string; crestUrl?: string; primaryColor?: string; secondaryColor?: string; enrollmentStatus?: string; delegateName?: string; delegatePhone?: string; delegateEmail?: string; registeredAt?: Date }) { return this.prisma.team.create({ data: { ...input, enrollmentStatus: input.enrollmentStatus as never } }); }
   update(id: string, input: { name?: string; shortName?: string; groupName?: string; crestUrl?: string | null; status?: string; primaryColor?: string; secondaryColor?: string; enrollmentStatus?: string; delegateName?: string | null; delegatePhone?: string | null; delegateEmail?: string | null; registeredAt?: Date }) {

@@ -13,7 +13,8 @@ export interface TeamRecord {
   readonly delegatePhone: string | null;
   readonly delegateEmail: string | null;
   readonly registeredAt: Date;
-  readonly players?: readonly unknown[];
+  readonly activePlayerCount?: number;
+  readonly players?: readonly { readonly id: string }[];
 }
 
 export abstract class TeamRepository {

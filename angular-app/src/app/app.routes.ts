@@ -13,6 +13,7 @@ import { AdminCollectionPage } from './features/admin/pages/admin-collection.pag
 import { AdminTournamentFormPage } from './features/admin/pages/admin-tournament-form.page';
 import { AdminTournamentDetailPage } from './features/admin/pages/admin-tournament-detail.page';
 import { AdminMatchSheetPage } from './features/admin/pages/admin-match-sheet.page';
+import { AdminTeamFormPage } from './features/admin/pages/admin-team-form.page';
 import { adminGuard, adminRoleGuard } from './features/admin/guards/admin.guard';
 
 export const routes: Routes = [
@@ -23,6 +24,8 @@ export const routes: Routes = [
     { path: 'torneos/nuevo', component: AdminTournamentFormPage, title: 'Administración · Crear torneo' },
     { path: 'torneos/:tournamentId/editar', component: AdminTournamentFormPage, title: 'Administración · Editar torneo' },
     { path: 'torneos/:tournamentId', component: AdminTournamentDetailPage, title: 'Administración · Detalle del torneo' },
+    { path: 'equipos/nuevo', component: AdminTeamFormPage, title: 'Administración · Registrar equipo' },
+    { path: 'equipos/:teamId/editar', component: AdminTeamFormPage, title: 'Administración · Editar equipo' },
     { path: 'planilla', component: AdminMatchSheetPage, title: 'Administración · Planilla del partido' },
     { path: ':section', component: AdminCollectionPage }
   ] },

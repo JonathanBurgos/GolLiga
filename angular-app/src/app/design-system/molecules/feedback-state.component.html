@@ -1,0 +1,5 @@
+<section class="feedback" [class.error]="mode()==='error'" [class.success]="mode()==='success'" [attr.role]="mode()==='error'?'alert':'status'">
+  <span class="mark" aria-hidden="true">{{mode()==='error'?'!':mode()==='success'?'✓':'·'}}</span>
+  <strong>{{title()}}</strong>
+  <p>{{message()}}</p>
+</section>

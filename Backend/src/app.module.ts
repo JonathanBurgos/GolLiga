@@ -1,8 +1,9 @@
 import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { APP_FILTER, APP_GUARD } from '@nestjs/core';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+import { LoggerModule } from 'nestjs-pino';
 import { AuthService } from './application/auth/auth.service.js';
 import { InsightsService } from './application/insights/insights.service.js';
 import { MatchService } from './application/matches/match.service.js';
@@ -26,10 +27,21 @@ import { PlayersController } from './presentation/http/players/players.controlle
 import { TeamsController } from './presentation/http/teams/teams.controller.js';
 import { TournamentsController } from './presentation/http/tournaments/tournaments.controller.js';
 import { UsersController } from './presentation/http/users/users.controller.js';
+import { AllExceptionsFilter } from './presentation/http/filters/all-exceptions.filter.js';
+import { TeamCrestStorageService } from './infrastructure/storage/team-crest-storage.service.js';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ isGlobal: true, envFilePath: ['.env'] }),
+    LoggerModule.forRoot({
+      pinoHttp: {
+        level: process.env.LOG_LEVEL ?? 'info',
+        redact: {
+          paths: ['req.headers.authorization', 'req.headers.cookie', 'res.headers["set-cookie"]'],
+          censor: '[REDACTED]',
+        },
+      },
+    }),
     JwtModule.registerAsync({ global: true, inject: [ConfigService], useFactory: (config: ConfigService) => ({
       secret: config.getOrThrow<string>('JWT_SECRET'),
       signOptions: { expiresIn: config.get<string>('JWT_EXPIRES_IN', '15m') as `${number}${'s' | 'm' | 'h' | 'd'}` },
@@ -48,6 +60,8 @@ import { UsersController } from './presentation/http/users/users.controller.js';
     { provide: UserManagementService, useFactory: (users: UserRepository) => new UserManagementService(users), inject: [UserRepository] },
     JwtAuthGuard, RolesGuard, { provide: APP_GUARD, useClass: ThrottlerGuard },
     { provide: APP_GUARD, useClass: JwtAuthGuard }, { provide: APP_GUARD, useClass: RolesGuard },
+    TeamCrestStorageService,
+    { provide: APP_FILTER, useClass: AllExceptionsFilter },
   ],
 })
 export class AppModule {}
