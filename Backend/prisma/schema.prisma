@@ -1,0 +1,215 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/infrastructure/persistence/prisma/generated"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum TournamentStatus {
+  DRAFT
+  UPCOMING
+  ACTIVE
+  FINISHED
+}
+
+enum TeamStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum TeamEnrollmentStatus {
+  PENDING
+  CONFIRMED
+}
+
+enum PlayerStatus {
+  ACTIVE
+  INACTIVE
+}
+
+enum MatchStatus {
+  SCHEDULED
+  IN_PROGRESS
+  FINISHED
+  CANCELLED
+}
+
+enum MatchEventType {
+  GOAL
+  ASSIST
+  YELLOW_CARD
+  RED_CARD
+  FOUL
+  SUBSTITUTION
+  SANCTION
+}
+
+model User {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String
+  displayName  String
+  isActive     Boolean  @default(true)
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  createdEvents MatchEvent[] @relation("EventAuthor")
+  roles         UserRoleAssignment[]
+
+  @@index([isActive])
+}
+
+model Role {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String
+  isSystem    Boolean          @default(true)
+  users       UserRoleAssignment[]
+  permissions RolePermission[]
+  createdAt   DateTime         @default(now())
+
+  @@index([isSystem, name])
+}
+
+model Permission {
+  id          String           @id @default(cuid())
+  code        String           @unique
+  name        String
+  description String
+  roles       RolePermission[]
+}
+
+model UserRoleAssignment {
+  userId     String
+  roleId     String
+  assignedAt DateTime @default(now())
+  user       User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role       Role     @relation(fields: [roleId], references: [id], onDelete: Restrict)
+
+  @@id([userId, roleId])
+  @@index([roleId])
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  role         Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission   Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+  @@index([permissionId])
+}
+
+model Tournament {
+  id          String           @id @default(cuid())
+  name        String
+  season      Int
+  competition String
+  status      TournamentStatus @default(DRAFT)
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+  teams       Team[]
+  matches     Match[]
+
+  @@unique([name, season])
+  @@index([status, season])
+}
+
+model Team {
+  id           String     @id @default(cuid())
+  tournamentId String
+  tournament   Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  name         String
+  shortName    String          @default("")
+  groupName    String
+  crestUrl     String?
+  primaryColor String          @default("#1F6A34")
+  secondaryColor String        @default("#12382A")
+  enrollmentStatus TeamEnrollmentStatus @default(PENDING)
+  delegateName String?
+  delegatePhone String?
+  delegateEmail String?
+  registeredAt DateTime        @default(now())
+  status       TeamStatus @default(ACTIVE)
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+  players      Player[]
+  homeMatches  Match[]    @relation("HomeTeam")
+  awayMatches  Match[]    @relation("AwayTeam")
+  matchEvents  MatchEvent[] @relation("EventTeam")
+
+  @@unique([tournamentId, name])
+  @@index([tournamentId, groupName])
+}
+
+model Player {
+  id          String       @id @default(cuid())
+  teamId      String
+  team        Team         @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  name        String
+  jerseyNumber Int
+  position    String
+  dateOfBirth DateTime?
+  avatarUrl   String?
+  status      PlayerStatus @default(ACTIVE)
+  createdAt   DateTime     @default(now())
+  updatedAt   DateTime     @updatedAt
+  events      MatchEvent[] @relation("EventPlayer")
+  relatedEvents MatchEvent[] @relation("RelatedPlayer")
+
+  @@unique([teamId, jerseyNumber])
+  @@index([teamId, status])
+}
+
+model Match {
+  id            String      @id @default(cuid())
+  tournamentId  String
+  tournament    Tournament  @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  homeTeamId    String
+  homeTeam      Team        @relation("HomeTeam", fields: [homeTeamId], references: [id], onDelete: Restrict)
+  awayTeamId    String
+  awayTeam      Team        @relation("AwayTeam", fields: [awayTeamId], references: [id], onDelete: Restrict)
+  round         Int
+  groupName     String
+  scheduledAt   DateTime
+  venue         String?
+  status        MatchStatus @default(SCHEDULED)
+  homeScore     Int         @default(0)
+  awayScore     Int         @default(0)
+  version       Int         @default(0)
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+  events        MatchEvent[]
+
+  @@index([tournamentId, round, scheduledAt])
+  @@index([homeTeamId, status])
+  @@index([awayTeamId, status])
+}
+
+model MatchEvent {
+  id                 String         @id @default(cuid())
+  matchId            String
+  match              Match          @relation(fields: [matchId], references: [id], onDelete: Cascade)
+  teamId             String
+  team               Team           @relation("EventTeam", fields: [teamId], references: [id], onDelete: Restrict)
+  playerId           String
+  player              Player         @relation("EventPlayer", fields: [playerId], references: [id], onDelete: Restrict)
+  relatedPlayerId    String?
+  relatedPlayer      Player?        @relation("RelatedPlayer", fields: [relatedPlayerId], references: [id], onDelete: Restrict)
+  type               MatchEventType
+  minute             Int
+  details            String?
+  suspensionMatches  Int?
+  suspensionFrom     DateTime?
+  suspensionTo       DateTime?
+  createdById        String
+  createdBy          User           @relation("EventAuthor", fields: [createdById], references: [id], onDelete: Restrict)
+  createdAt          DateTime       @default(now())
+
+  @@index([matchId, minute])
+  @@index([teamId, playerId, type])
+}

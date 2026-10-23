@@ -1,0 +1,11 @@
+CREATE TYPE "TeamEnrollmentStatus" AS ENUM ('PENDING', 'CONFIRMED');
+
+ALTER TABLE "Team"
+  ADD COLUMN "shortName" TEXT NOT NULL DEFAULT '',
+  ADD COLUMN "primaryColor" TEXT NOT NULL DEFAULT '#1F6A34',
+  ADD COLUMN "secondaryColor" TEXT NOT NULL DEFAULT '#12382A',
+  ADD COLUMN "enrollmentStatus" "TeamEnrollmentStatus" NOT NULL DEFAULT 'PENDING',
+  ADD COLUMN "delegateName" TEXT,
+  ADD COLUMN "delegatePhone" TEXT,
+  ADD COLUMN "delegateEmail" TEXT,
+  ADD COLUMN "registeredAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP;

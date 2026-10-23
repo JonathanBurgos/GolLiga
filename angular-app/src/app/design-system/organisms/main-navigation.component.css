@@ -1,0 +1,1 @@
+nav{display:flex;align-items:center;gap:17px}a{color:#d7e7dc;text-decoration:none;font-size:11px;font-weight:600;padding:9px 0}a:hover,a.active{color:#fff}a.active{box-shadow:inset 0 -2px #67bd7a}@media(max-width:900px){nav{overflow:auto;gap:12px}a{white-space:nowrap}}

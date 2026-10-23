@@ -1,0 +1,15 @@
+<main class="picker">
+  <nav class="toolbar" aria-label="Acceso de usuario">
+    <a class="login-link" routerLink="/admin/acceso">
+      <svg aria-hidden="true" viewBox="0 0 20 20" fill="none"><path d="M10 10a3.25 3.25 0 1 0 0-6.5A3.25 3.25 0 0 0 10 10ZM3.75 17a6.25 6.25 0 0 1 12.5 0" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg>
+      <span>Iniciar sesión</span>
+    </a>
+  </nav>
+  <header>
+    <span>TU FÚTBOL, EN UN SOLO LUGAR</span>
+    <h1>¿Qué torneo quieres seguir?</h1>
+    <p>Elige una competencia para consultar sus equipos, fixture, resultados y estadísticas.</p>
+  </header>
+  @if(tournaments$|async;as tournaments){<section class="list" aria-label="Torneos disponibles">@for (tournament of tournaments; track tournament.id) {<gl-tournament-card [tournament]="tournament" />}@empty{<div class="empty-state"><h2>No hay torneos disponibles</h2><p>Cuando se publique un torneo, aparecerá aquí.</p><a routerLink="/admin/acceso">Inicia sesión para administrar</a></div>}</section>}
+  <p class="note">La información de esta página se carga desde la base de datos.</p>
+</main>

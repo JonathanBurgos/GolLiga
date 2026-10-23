@@ -1,0 +1,51 @@
+@if (view$ | async; as view) {
+  <section class="page">
+    <span>{{ view.tournament?.competition }} · TEMPORADA {{ view.tournament?.season }}</span>
+    <h1>{{ view.title }}</h1>
+    <p>{{ view.tournament?.name }} · Información publicada desde las planillas finalizadas.</p>
+    @if (insights$ | async; as stats) {
+      @switch (view.title) {
+        @case ('Resultados') {
+          <section class="data-panel"><h2>Partidos finalizados</h2>
+            @for (result of stats.results; track result.id) {
+              <article class="data-row"><span><strong>{{ result.name }}</strong><small>{{ result.detail }}</small></span><b>{{ result.score }}</b></article>
+            }
+            @if (!stats.results.length) { <p class="empty">Los resultados aparecerán al finalizar las planillas.</p> }
+          </section>
+        }
+        @case ('Posiciones') {
+          <section class="data-panel"><h2>Tabla de posiciones</h2><div class="table-scroll"><table><thead><tr><th>#</th><th>EQUIPO</th><th>GRUPO</th><th>PJ</th><th>G</th><th>E</th><th>P</th><th>GF</th><th>GC</th><th>DG</th><th>PTS</th></tr></thead><tbody>
+            @for (row of stats.standings; track row.team) { <tr><td>{{ row.position }}</td><td><strong>{{ row.team }}</strong></td><td>{{ row.group }}</td><td>{{ row.played }}</td><td>{{ row.won }}</td><td>{{ row.drawn }}</td><td>{{ row.lost }}</td><td>{{ row.goalsFor }}</td><td>{{ row.goalsAgainst }}</td><td>{{ row.goalDifference }}</td><td><strong>{{ row.points }}</strong></td></tr> }
+          </tbody></table></div><small>Se recalcula al finalizar cada partido.</small></section>
+        }
+        @case ('Estadísticas') {
+          <div class="stats-grid">
+            <section class="data-panel"><h2>Goleadores</h2>
+              @for (player of stats.scorers; track player.team+player.shirtNumber) { <article class="data-row"><span><strong>#{{ player.shirtNumber }} {{ player.player }}</strong><small>{{ player.team }} · {{ player.assists }} asistencias</small></span><b>{{ player.goals }}</b></article> }
+              @if (!stats.scorers.length) { <p class="empty">Sin goles registrados en partidos finalizados.</p> }
+            </section>
+            <section class="data-panel"><h2>Fair Play</h2>
+              @for (team of stats.fairPlay; track team.team) { <article class="data-row"><span><strong>{{ team.team }}</strong><small>{{ team.yellow }} amarillas · {{ team.red }} rojas · {{ team.fouls }} faltas</small></span><b>{{ team.points }} pts</b></article> }
+              @if (!stats.fairPlay.length) { <p class="empty">Sin registros disciplinarios.</p> }
+            </section>
+          </div>
+        }
+        @case ('Fair Play') {
+          <section class="data-panel"><h2>Disciplina por equipo</h2>
+            @for (team of stats.fairPlay; track team.team) { <article class="data-row"><span><strong>{{ team.team }}</strong><small>{{ team.yellow }} amarillas · {{ team.red }} rojas · {{ team.fouls }} faltas</small></span><b>{{ team.points }} pts</b></article> }
+            @if (!stats.fairPlay.length) { <p class="empty">La tabla se actualizará al finalizar una planilla.</p> }
+          </section>
+        }
+        @case ('Sancionados') {
+          <section class="data-panel"><h2>Jugadores sancionados</h2>
+            @for (item of stats.suspensions; track item.id) { <article class="data-row"><span><strong>{{ item.player }} · {{ item.team }}</strong><small>{{ item.details || 'Sanción disciplinaria' }}</small></span><b>{{ item.suspensionFrom }} — {{ item.suspensionTo }}</b></article> }
+            @if (!stats.suspensions.length) { <p class="empty">No hay suspensiones registradas.</p> }
+          </section>
+        }
+        @default {
+          <article><b>Próximamente</b><p>Esta sección estará disponible cuando la organización publique la información.</p><a [routerLink]="['/torneos', view.tournament?.id, 'equipos']">Explorar equipos →</a></article>
+        }
+      }
+    }
+  </section>
+}

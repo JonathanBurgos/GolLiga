@@ -1,0 +1,10 @@
+node_modules/
+dist/
+src/infrastructure/persistence/prisma/generated/
+.env
+.env.*
+!.env.example
+*.log
+.local-postgres-data/
+.eslintcache
+coverage/
