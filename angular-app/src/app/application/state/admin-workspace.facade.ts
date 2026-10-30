@@ -13,6 +13,24 @@ interface Player { id:string; teamId:string; name:string; jerseyNumber:number; p
 interface Match { id:string; tournamentId:string; homeTeamId:string; awayTeamId:string; homeTeam:{id:string;name:string}; awayTeam:{id:string;name:string}; round:number; groupName:string; scheduledAt:string; venue?:string|null; status:string; homeScore:number; awayScore:number; }
 interface Insights { results:Match[]; standings:Array<{teamId:string;team:string;group:string;played:number;won:number;drawn:number;lost:number;goalsFor:number;goalsAgainst:number;goalDifference:number;points:number;position:number}>; scorers:Array<{playerId:string;name:string;shirtNumber:number;teamId:string;team:string;goals:number;assists:number;yellow:number;red:number}>; fairPlay:Array<{teamId:string;team:string;yellow:number;red:number;fouls:number;points:number}>; suspensions:Array<Record<string,unknown>>; totals:{matchesPlayed:number;goals:number;assists:number}; }
 export interface AdminTournamentContext { readonly id:string; readonly name:string; readonly competition:string; readonly season:number; }
+export interface DashboardTeam { readonly id:string; readonly name:string; readonly shortName:string; readonly crestUrl?:string|null; readonly primaryColor:string; readonly groupName:string; }
+export interface DashboardMatch { readonly id:string; readonly homeTeamId:string; readonly awayTeamId:string; readonly homeTeam:string; readonly awayTeam:string; readonly homeScore:number; readonly awayScore:number; readonly round:number; readonly groupName:string; readonly scheduledAt:string; readonly venue?:string|null; readonly status:string; }
+export interface DashboardStanding { readonly teamId:string; readonly team:string; readonly group:string; readonly played:number; readonly goalDifference:number; readonly points:number; readonly form:readonly ('win'|'draw'|'loss')[]; }
+export interface DashboardScorer { readonly playerId:string; readonly name:string; readonly team:string; readonly teamId:string; readonly goals:number; }
+export interface AdminDashboardData {
+ readonly tournament:AdminTournamentContext;
+ readonly teams:readonly DashboardTeam[];
+ readonly matches:readonly DashboardMatch[];
+ readonly standings:readonly DashboardStanding[];
+ readonly scorers:readonly DashboardScorer[];
+ readonly players:number;
+ readonly played:number;
+ readonly goals:number;
+ readonly yellowCards:number;
+ readonly redCards:number;
+ readonly pendingMatches:number;
+ readonly groups:readonly string[];
+}
 
 @Injectable({providedIn:'root'})
 export class AdminWorkspaceFacade {
@@ -51,6 +69,40 @@ export class AdminWorkspaceFacade {
  private matchRecord(match:Match):AdminRecord{return{id:match.id,name:`${match.homeTeam.name} vs ${match.awayTeam.name}`,detail:`J${match.round} · ${match.groupName} · ${new Date(match.scheduledAt).toLocaleString('es-CO')}${match.venue?` · ${match.venue}`:''}`,score:match.status==='FINISHED'?`${match.homeScore} – ${match.awayScore}`:undefined,status:this.matchStatus(match.status),homeTeamId:match.homeTeamId,awayTeamId:match.awayTeamId,groupName:match.groupName,round:match.round,scheduledAt:match.scheduledAt};}
  collection(key:AdminSectionKey):Observable<readonly AdminRecord[]>{return this.reload$.pipe(switchMap(()=>this.recordsFromDatabase(key)),shareReplay({bufferSize:1,refCount:true}));}
  readonly teamsContext$:Observable<AdminTournamentContext|null>=this.reload$.pipe(switchMap(()=>this.firstTournament()),map(tournament=>tournament?({id:tournament.id,name:tournament.name,competition:tournament.competition,season:tournament.season}):null),shareReplay({bufferSize:1,refCount:true}));
+ readonly dashboard$:Observable<AdminDashboardData|null>=this.reload$.pipe(
+  switchMap(()=>this.firstTournament()),
+  switchMap(tournament=>{
+   if(!tournament)return of(null);
+   return forkJoin([this.teamsFor(tournament.id),this.matchesFor(tournament.id),this.insightsFor(tournament.id)]).pipe(
+    map(([teams,matches,insights])=>{
+     const finished=matches.filter(match=>match.status==='FINISHED').sort((a,b)=>new Date(b.scheduledAt).getTime()-new Date(a.scheduledAt).getTime());
+     const forms=new Map<string,('win'|'draw'|'loss')[]>();
+     for(const match of finished){
+      const outcome=match.homeScore===match.awayScore?'draw':match.homeScore>match.awayScore?'win':'loss';
+      const homeForm=forms.get(match.homeTeamId)??[];homeForm.push(outcome);forms.set(match.homeTeamId,homeForm);
+      const awayForm=forms.get(match.awayTeamId)??[];awayForm.push(outcome==='draw'?'draw':outcome==='win'?'loss':'win');forms.set(match.awayTeamId,awayForm);
+     }
+     const cards=insights?.fairPlay??[];
+     const fixtures=matches.filter(match=>match.status==='SCHEDULED'||match.status==='IN_PROGRESS');
+     return{
+      tournament:{id:tournament.id,name:tournament.name,competition:tournament.competition,season:tournament.season},
+      teams:teams.map(team=>({id:team.id,name:team.name,shortName:team.shortName,crestUrl:team.crestUrl,primaryColor:team.primaryColor,groupName:team.groupName})),
+      matches:matches.map(match=>({id:match.id,homeTeamId:match.homeTeamId,awayTeamId:match.awayTeamId,homeTeam:match.homeTeam.name,awayTeam:match.awayTeam.name,homeScore:match.homeScore,awayScore:match.awayScore,round:match.round,groupName:match.groupName,scheduledAt:match.scheduledAt,venue:match.venue,status:match.status})),
+      standings:(insights?.standings??[]).map(row=>({teamId:row.teamId,team:row.team,group:row.group,played:row.played,goalDifference:row.goalDifference,points:row.points,form:(forms.get(row.teamId)??[]).slice(0,4).reverse()})),
+      scorers:(insights?.scorers??[]).slice(0,5).map(row=>({playerId:row.playerId,name:row.name,team:row.team,teamId:row.teamId,goals:row.goals})),
+      players:teams.reduce((total,team)=>total+(team.activePlayerCount??team.players?.length??0),0),
+      played:insights?.totals.matchesPlayed??0,
+      goals:insights?.totals.goals??0,
+      yellowCards:cards.reduce((total,row)=>total+row.yellow,0),
+      redCards:cards.reduce((total,row)=>total+row.red,0),
+      pendingMatches:fixtures.filter(match=>match.status==='SCHEDULED').length,
+      groups:[...new Set(teams.map(team=>team.groupName))].sort((a,b)=>a.localeCompare(b,'es')),
+     };
+    }),
+   );
+  }),
+  shareReplay({bufferSize:1,refCount:true}),
+ );
  private recordsFromDatabase(key:AdminSectionKey):Observable<AdminRecord[]>{
   switch(key){
    case 'torneos':return this.tournamentRecords();
@@ -87,7 +139,25 @@ export class AdminWorkspaceFacade {
  addPlayer(name:string,teamName:string,jerseyNumber:number,position:string):Observable<boolean>{
   return this.firstTournament().pipe(switchMap(t=>t?this.teamsFor(t.id).pipe(switchMap(teams=>{const team=teams.find(row=>row.name===teamName);return team?this.http.post(`${this.base}/teams/${team.id}/players`,{name:name.trim(),jerseyNumber,position:position.trim()||'Sin posición'}).pipe(map(()=>true)):of(false);})):of(false)),tap(ok=>{if(ok)this.refresh();}));
  }
- remove(key:AdminSectionKey,id:string):void{const path=key==='torneos'?'tournaments':key==='equipos'?'teams':key==='jugadores'?'players':key==='fixture'?'matches':null;if(path)this.write(this.http.delete(`${this.base}/${path}/${id}`),'Registro eliminado correctamente.');}
+ remove(key:AdminSectionKey,id:string):void{
+  const path=key==='torneos'?'tournaments':key==='equipos'?'teams':key==='jugadores'?'players':key==='fixture'?'matches':null;
+  if(!path)return;
+  if(key==='equipos'){
+   this.lastErrorSubject.next(null);
+   this.http.delete(`${this.base}/${path}/${id}`).subscribe({
+    next:()=>{this.refresh();this.notifications.success('Equipo eliminado','El equipo y sus jugadores se eliminaron correctamente.');},
+    error:error=>{
+     const message=error?.status===409
+      ?'No se puede eliminar el equipo porque está vinculado a partidos o a registros históricos.'
+      :'No se pudo eliminar el equipo. Revisa la conexión e inténtalo de nuevo.';
+     this.lastErrorSubject.next(message);
+     this.notifications.error('No se pudo eliminar',message);
+    }
+   });
+   return;
+  }
+  this.write(this.http.delete(`${this.base}/${path}/${id}`),'Registro eliminado correctamente.');
+ }
  rename(key:AdminSectionKey,id:string,name:string):void{const path=key==='torneos'?'tournaments':key==='equipos'?'teams':key==='jugadores'?'players':null;if(path)this.write(this.http.patch(`${this.base}/${path}/${id}`,{name:name.trim()}),'Nombre actualizado correctamente.');}
  update(key:AdminSectionKey,id:string,changes:Partial<Pick<AdminRecord,'name'|'detail'|'status'>>):void{this.rename(key,id,changes.name??'');}
  toggleStatus(key:AdminSectionKey,id:string):void{

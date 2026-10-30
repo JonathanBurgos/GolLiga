@@ -5,6 +5,7 @@ import { MatchRepository } from '../../domain/matches/match.repository.js';
 import { PlayerRepository } from '../../domain/players/player.repository.js';
 import { TeamRepository } from '../../domain/teams/team.repository.js';
 import { TournamentRepository } from '../../domain/tournaments/tournament.repository.js';
+import { TournamentRulesInput } from '../../domain/tournaments/tournament.repository.js';
 import { UserRepository } from '../../domain/users/user.repository.js';
 import { PrismaService } from './prisma.service.js';
 
@@ -13,9 +14,25 @@ export class PrismaTournamentRepository implements TournamentRepository {
   constructor(private readonly prisma: PrismaService) {}
   findAll() { return this.prisma.tournament.findMany({ orderBy: [{ season: 'desc' }, { name: 'asc' }] }); }
   findById(id: string) { return this.prisma.tournament.findUnique({ where: { id } }); }
-  create(input: { name: string; season: number; competition: string; startDate?: Date; endDate?: Date }) { return this.prisma.tournament.create({ data: input }); }
+  create(input: { name: string; season: number; competition: string; startDate?: Date; endDate?: Date }) {
+    return this.prisma.tournament.create({ data: { ...input, rules: { create: {} } } });
+  }
   update(id: string, input: { name?: string; season?: number; competition?: string; status?: string; startDate?: Date | null; endDate?: Date | null }) {
     return this.prisma.tournament.update({ where: { id }, data: { ...input, status: input.status as never } });
+  }
+  getOrCreateRules(tournamentId: string) {
+    return this.prisma.tournamentRules.upsert({
+      where: { tournamentId },
+      create: { tournamentId },
+      update: {},
+    });
+  }
+  updateRules(tournamentId: string, input: TournamentRulesInput) {
+    return this.prisma.tournamentRules.upsert({
+      where: { tournamentId },
+      create: { tournamentId, ...input },
+      update: input,
+    });
   }
   async remove(id: string) { await this.prisma.tournament.delete({ where: { id } }); }
 }
@@ -35,7 +52,26 @@ export class PrismaTeamRepository implements TeamRepository {
   update(id: string, input: { name?: string; shortName?: string; groupName?: string; crestUrl?: string | null; status?: string; primaryColor?: string; secondaryColor?: string; enrollmentStatus?: string; delegateName?: string | null; delegatePhone?: string | null; delegateEmail?: string | null; registeredAt?: Date }) {
     return this.prisma.team.update({ where: { id }, data: { ...input, status: input.status as never, enrollmentStatus: input.enrollmentStatus as never } });
   }
-  async remove(id: string) { await this.prisma.team.delete({ where: { id } }); }
+  async remove(id: string) {
+    await this.prisma.$transaction(async (tx) => {
+      const [matches, events] = await Promise.all([
+        tx.match.count({ where: { OR: [{ homeTeamId: id }, { awayTeamId: id }] } }),
+        tx.matchEvent.count({
+          where: {
+            OR: [
+              { teamId: id },
+              { player: { is: { teamId: id } } },
+              { relatedPlayer: { is: { teamId: id } } },
+            ],
+          },
+        }),
+      ]);
+      if (matches || events) {
+        throw new ConflictError('No puedes eliminar un equipo que está vinculado a partidos o a sus registros históricos.');
+      }
+      await tx.team.delete({ where: { id } });
+    }, { isolationLevel: 'Serializable' });
+  }
 }
 
 @Injectable()

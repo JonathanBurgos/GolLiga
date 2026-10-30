@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
+import { ArrayMaxSize, ArrayMinSize, ArrayUnique, IsArray, IsBoolean, IsDateString, IsEmail, IsEnum, IsIn, IsInt, IsOptional, IsString, IsUrl, Matches, Max, MaxLength, Min, MinLength } from 'class-validator';
 
 export class CreateTournamentDto {
   @ApiProperty({ example: 'Copa Aficionados' }) @IsString() @MinLength(3) @MaxLength(100) name!: string;
@@ -15,6 +15,27 @@ export class UpdateTournamentDto {
   @ApiPropertyOptional({ enum: ['DRAFT', 'UPCOMING', 'ACTIVE', 'FINISHED'] }) @IsOptional() @IsIn(['DRAFT', 'UPCOMING', 'ACTIVE', 'FINISHED']) status?: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() startDate?: string;
   @ApiPropertyOptional() @IsOptional() @IsDateString() endDate?: string;
+}
+export class UpdateTournamentRulesDto {
+  @ApiProperty({ minimum: 0, maximum: 10 }) @IsInt() @Min(0) @Max(10) victoryPoints!: number;
+  @ApiProperty({ minimum: 0, maximum: 10 }) @IsInt() @Min(0) @Max(10) drawPoints!: number;
+  @ApiProperty({ minimum: 0, maximum: 10 }) @IsInt() @Min(0) @Max(10) defeatPoints!: number;
+  @ApiProperty({ type: [String], enum: ['goalDifference', 'goalsFor', 'headToHead', 'fairPlay', 'lottery'] }) @IsArray() @ArrayMinSize(1) @ArrayMaxSize(5) @ArrayUnique() @IsIn(['goalDifference', 'goalsFor', 'headToHead', 'fairPlay', 'lottery'], { each: true }) tieBreakCriteria!: string[];
+  @ApiProperty({ enum: ['GROUPS_PLAYOFFS', 'LEAGUE', 'KNOCKOUT'] }) @IsIn(['GROUPS_PLAYOFFS', 'LEAGUE', 'KNOCKOUT']) competitionFormat!: string;
+  @ApiProperty({ minimum: 1, maximum: 64 }) @IsInt() @Min(1) @Max(64) groupCount!: number;
+  @ApiProperty({ minimum: 1, maximum: 32 }) @IsInt() @Min(1) @Max(32) qualifiersPerGroup!: number;
+  @ApiProperty({ minimum: 1, maximum: 20 }) @IsInt() @Min(1) @Max(20) yellowCardsForSuspension!: number;
+  @ApiProperty({ minimum: 1, maximum: 20 }) @IsInt() @Min(1) @Max(20) directRedSuspensionMatches!: number;
+  @ApiProperty({ minimum: 1, maximum: 20 }) @IsInt() @Min(1) @Max(20) secondYellowSuspensionMatches!: number;
+  @ApiProperty() @IsBoolean() resetCardsAtPlayoffs!: boolean;
+  @ApiProperty({ minimum: 0, maximum: 20 }) @IsInt() @Min(0) @Max(20) yellowCardPoints!: number;
+  @ApiProperty({ minimum: 0, maximum: 20 }) @IsInt() @Min(0) @Max(20) secondYellowPoints!: number;
+  @ApiProperty({ minimum: 0, maximum: 20 }) @IsInt() @Min(0) @Max(20) directRedPoints!: number;
+  @ApiProperty() @IsString() @MaxLength(250) otherSanctions!: string;
+  @ApiProperty() @IsString() @MaxLength(80) timeZone!: string;
+  @ApiProperty() @IsString() @Matches(/^[A-Z]{3}$/) currency!: string;
+  @ApiProperty({ minimum: 0, maximum: 1000000000 }) @IsInt() @Min(0) @Max(1000000000) registrationFee!: number;
+  @ApiProperty() @IsString() @MaxLength(150) organizationContact!: string;
 }
 export class CreateTeamDto {
   @ApiProperty() @IsString() @MinLength(2) @MaxLength(80) name!: string;

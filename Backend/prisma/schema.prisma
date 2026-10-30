@@ -114,9 +114,38 @@ model Tournament {
   updatedAt   DateTime         @updatedAt
   teams       Team[]
   matches     Match[]
+  rules       TournamentRules?
 
   @@unique([name, season])
   @@index([status, season])
+}
+
+model TournamentRules {
+  id                            String     @id @default(cuid())
+  tournamentId                  String     @unique
+  tournament                    Tournament @relation(fields: [tournamentId], references: [id], onDelete: Cascade)
+  victoryPoints                 Int        @default(3)
+  drawPoints                    Int        @default(1)
+  defeatPoints                  Int        @default(0)
+  tieBreakCriteria              String[]   @default(["goalDifference", "goalsFor", "headToHead", "fairPlay", "lottery"])
+  competitionFormat             String     @default("GROUPS_PLAYOFFS")
+  groupCount                    Int        @default(4)
+  qualifiersPerGroup            Int        @default(2)
+  yellowCardsForSuspension      Int        @default(3)
+  directRedSuspensionMatches    Int        @default(2)
+  secondYellowSuspensionMatches Int        @default(1)
+  resetCardsAtPlayoffs          Boolean    @default(true)
+  yellowCardPoints              Int        @default(1)
+  secondYellowPoints            Int        @default(3)
+  directRedPoints               Int        @default(4)
+  otherSanctions                String     @default("Configurable por tipo")
+  timeZone                      String     @default("America/Bogota")
+  currency                      String     @default("COP")
+  registrationFee               Int        @default(350000)
+  organizationContact           String     @default("")
+  createdAt                     DateTime   @default(now())
+  updatedAt                     DateTime   @updatedAt
+
 }
 
 model Team {

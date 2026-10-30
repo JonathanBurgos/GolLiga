@@ -3,7 +3,7 @@ import { ApiBearerAuth, ApiTags } from '@nestjs/swagger';
 import { TournamentService } from '../../../application/tournaments/tournament.service.js';
 import { Role } from '../../../domain/common/roles.js';
 import { Permissions, Public, Roles } from '../auth/auth.decorators.js';
-import { CreateTournamentDto, UpdateTournamentDto } from '../dto/resource.dto.js';
+import { CreateTournamentDto, UpdateTournamentDto, UpdateTournamentRulesDto } from '../dto/resource.dto.js';
 
 @ApiTags('Torneos') @ApiBearerAuth() @Roles(Role.Administrator) @Permissions('tournaments:manage')
 @Controller('tournaments')
@@ -17,5 +17,7 @@ export class TournamentsController {
   @Patch(':id') update(@Param('id') id: string, @Body() dto: UpdateTournamentDto) {
     return this.tournaments.update(id, { ...dto, startDate: dto.startDate ? new Date(dto.startDate) : undefined, endDate: dto.endDate ? new Date(dto.endDate) : undefined });
   }
+  @Get(':id/rules') getRules(@Param('id') id: string) { return this.tournaments.getRules(id); }
+  @Patch(':id/rules') updateRules(@Param('id') id: string, @Body() dto: UpdateTournamentRulesDto) { return this.tournaments.updateRules(id, dto); }
   @Delete(':id') remove(@Param('id') id: string) { return this.tournaments.remove(id); }
 }

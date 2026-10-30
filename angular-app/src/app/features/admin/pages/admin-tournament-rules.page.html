@@ -1,0 +1,119 @@
+<header class="rules-head">
+  <div>
+    <a class="back" [routerLink]="['/admin/torneos', tournamentId]">← Volver al torneo</a>
+    <span class="eyebrow">CONFIGURACIÓN DEL TORNEO</span>
+    <h1>Reglamento</h1>
+    <p>{{ tournamentName }} · Los cambios recalculan posiciones, sanciones y Fair Play</p>
+  </div>
+  <a class="preview-link" [routerLink]="['/torneos', tournamentId]">Vista previa ↗</a>
+</header>
+
+@if (loading) {
+  <section class="rules-message loading-state" role="status" aria-live="polite">
+    <span class="loading-spinner" aria-hidden="true"></span>
+    <div><strong>Cargando el reglamento</strong><p>Estamos preparando la configuración de este torneo.</p></div>
+  </section>
+} @else if (error && !rules) {
+  <section class="rules-message error-state" role="alert">
+    <span class="error-icon" aria-hidden="true">!</span>
+    <div><strong>No se pudo mostrar el reglamento</strong><p>{{ error }}</p></div>
+    <button type="button" class="retry-action" (click)="loadRules()">Reintentar</button>
+  </section>
+} @else if (rules) {
+  <form class="rules-form" (ngSubmit)="save()">
+    <div class="save-notice"><span>ⓘ</span> Los cambios se aplican a los partidos ya confirmados. Revisa la vista previa antes de guardar.</div>
+
+    <section class="rules-section">
+      <header><h2>Sistema de puntuación</h2><p>Puntos que recibe un equipo por cada resultado.</p></header>
+      <div class="section-card scoring-card">
+        @for (item of scoringOptions; track item.field) {
+          <div class="stepper-field">
+            <label>{{ item.label }}</label>
+            <div class="stepper">
+              <button type="button" [attr.aria-label]="'Restar ' + item.label" (click)="adjust(item.field, -1, item.min, item.max)">−</button>
+              <strong>{{ rules[item.field] }}</strong>
+              <button type="button" [attr.aria-label]="'Sumar ' + item.label" (click)="adjust(item.field, 1, item.min, item.max)">+</button>
+            </div>
+          </div>
+        }
+      </div>
+    </section>
+
+    <section class="rules-section">
+      <header><h2>Criterios de desempate</h2><p>Se aplican en este orden cuando dos equipos tienen los mismos puntos. Puedes cambiar el orden.</p></header>
+      <div class="section-card criteria-card">
+        @for (criterion of rules.tieBreakCriteria; track criterion; let position = $index) {
+          <div class="criterion" draggable="true" (dragstart)="draggingIndex = position" (dragover)="$event.preventDefault()" (drop)="moveCriterion(draggingIndex, position)">
+            <span class="drag-handle" aria-hidden="true">⠿</span>
+            <b>{{ position + 1 }}</b>
+            <strong>{{ criterionName(criterion) }}</strong>
+            <div class="criterion-actions">
+              <button type="button" [disabled]="position === 0" aria-label="Subir criterio" (click)="moveCriterion(position, position - 1)">↑</button>
+              <button type="button" [disabled]="position === rules.tieBreakCriteria.length - 1" aria-label="Bajar criterio" (click)="moveCriterion(position, position + 1)">↓</button>
+              <button type="button" aria-label="Quitar criterio" [disabled]="rules.tieBreakCriteria.length <= 1" (click)="removeCriterion(position)">×</button>
+            </div>
+          </div>
+        }
+        @if (availableCriteria().length) {
+          <button class="add-criterion" type="button" (click)="addCriterion()">＋ Agregar criterio</button>
+        }
+      </div>
+    </section>
+
+    <section class="rules-section">
+      <header><h2>Formato y clasificación</h2><p>Define cómo avanzan los equipos a la siguiente fase.</p></header>
+      <div class="section-card format-card">
+        <label class="control-field full">Formato de competición
+          <select name="competitionFormat" [(ngModel)]="rules.competitionFormat">
+            <option value="GROUPS_PLAYOFFS">Fase de grupos + playoffs</option>
+            <option value="LEAGUE">Liga (todos contra todos)</option>
+            <option value="KNOCKOUT">Eliminación directa</option>
+          </select>
+        </label>
+        <div class="format-number-fields">
+          <div class="stepper-field"><label for="group-count">Número de grupos</label><div class="stepper"><button type="button" aria-label="Restar grupos" (click)="adjust('groupCount', -1, 1, 64)">−</button><strong id="group-count">{{ rules.groupCount }}</strong><button type="button" aria-label="Sumar grupos" (click)="adjust('groupCount', 1, 1, 64)">+</button></div></div>
+          <div class="stepper-field"><label for="qualifiers-count">Avanzan por grupo</label><div class="stepper"><button type="button" aria-label="Restar clasificados" (click)="adjust('qualifiersPerGroup', -1, 1, 32)">−</button><strong id="qualifiers-count">{{ rules.qualifiersPerGroup }}</strong><button type="button" aria-label="Sumar clasificados" (click)="adjust('qualifiersPerGroup', 1, 1, 32)">+</button></div><small>Los dos primeros pasan a octavos.</small></div>
+        </div>
+      </div>
+    </section>
+
+    <section class="rules-section">
+      <header><h2>Tarjetas y sanciones</h2><p>Suspensiones acumulativas según las tarjetas y sus reglas.</p></header>
+      <div class="section-card sanctions-card">
+        <div class="sanction-steppers">
+          <div class="stepper-field"><label>Amarillas para suspensión</label><div class="stepper"><button type="button" aria-label="Restar amarillas" (click)="adjust('yellowCardsForSuspension', -1, 1, 20)">−</button><strong>{{ rules.yellowCardsForSuspension }}</strong><button type="button" aria-label="Sumar amarillas" (click)="adjust('yellowCardsForSuspension', 1, 1, 20)">+</button></div><small>Se suspende 1 partido.</small></div>
+          <div class="stepper-field"><label>Roja directa (partidos)</label><div class="stepper"><button type="button" aria-label="Restar sanción roja" (click)="adjust('directRedSuspensionMatches', -1, 1, 20)">−</button><strong>{{ rules.directRedSuspensionMatches }}</strong><button type="button" aria-label="Sumar sanción roja" (click)="adjust('directRedSuspensionMatches', 1, 1, 20)">+</button></div></div>
+          <div class="stepper-field"><label>2.ª amarilla (partidos)</label><div class="stepper"><button type="button" aria-label="Restar sanción segunda amarilla" (click)="adjust('secondYellowSuspensionMatches', -1, 1, 20)">−</button><strong>{{ rules.secondYellowSuspensionMatches }}</strong><button type="button" aria-label="Sumar sanción segunda amarilla" (click)="adjust('secondYellowSuspensionMatches', 1, 1, 20)">+</button></div></div>
+        </div>
+        <label class="toggle-field"><span><strong>Reiniciar amarillas al pasar a playoffs</strong><small>Las amarillas de la fase de grupos no se arrastran.</small></span><input type="checkbox" name="resetCardsAtPlayoffs" [(ngModel)]="rules.resetCardsAtPlayoffs"><i></i></label>
+      </div>
+    </section>
+
+    <section class="rules-section">
+      <header><h2>Fair Play</h2><p>Puntos negativos por conducta. Menos puntos = mejor posición.</p></header>
+      <div class="section-card fair-play-card">
+        <div class="sanction-steppers">
+          <div class="stepper-field"><label>Amarilla</label><div class="stepper"><button type="button" aria-label="Restar puntos amarilla" (click)="adjust('yellowCardPoints', -1, 0, 20)">−</button><strong>{{ rules.yellowCardPoints }}</strong><button type="button" aria-label="Sumar puntos amarilla" (click)="adjust('yellowCardPoints', 1, 0, 20)">+</button></div></div>
+          <div class="stepper-field"><label>2.ª amarilla</label><div class="stepper"><button type="button" aria-label="Restar puntos segunda amarilla" (click)="adjust('secondYellowPoints', -1, 0, 20)">−</button><strong>{{ rules.secondYellowPoints }}</strong><button type="button" aria-label="Sumar puntos segunda amarilla" (click)="adjust('secondYellowPoints', 1, 0, 20)">+</button></div></div>
+          <div class="stepper-field"><label>Roja directa</label><div class="stepper"><button type="button" aria-label="Restar puntos roja directa" (click)="adjust('directRedPoints', -1, 0, 20)">−</button><strong>{{ rules.directRedPoints }}</strong><button type="button" aria-label="Sumar puntos roja directa" (click)="adjust('directRedPoints', 1, 0, 20)">+</button></div></div>
+        </div>
+        <label class="control-field full">Otras sanciones<input name="otherSanctions" [(ngModel)]="rules.otherSanctions" maxlength="250"></label>
+      </div>
+    </section>
+
+    <section class="rules-section">
+      <header><h2>General</h2><p>Datos de la organización y cuotas.</p></header>
+      <div class="section-card general-card">
+        <label class="control-field">Zona horaria<input name="timeZone" [(ngModel)]="rules.timeZone" maxlength="80" required></label>
+        <label class="control-field">Cuota de inscripción
+          <div class="fee-input"><select name="currency" [(ngModel)]="rules.currency"><option value="COP">COP</option><option value="USD">USD</option><option value="MXN">MXN</option><option value="EUR">EUR</option></select><input name="registrationFee" type="number" min="0" max="1000000000" [(ngModel)]="rules.registrationFee" required></div>
+          <small>{{ rules.currency }} {{ rules.registrationFee.toLocaleString('es-CO') }} por equipo</small>
+        </label>
+        <label class="control-field full">Contacto de la organización<input name="organizationContact" [(ngModel)]="rules.organizationContact" maxlength="150"></label>
+      </div>
+    </section>
+
+    @if (error) { <p class="form-error" role="alert">{{ error }}</p> }
+    <footer class="rules-footer"><span>{{ isDirty ? 'Tienes cambios sin guardar.' : 'Todos los cambios están guardados.' }}</span><div><button type="button" class="secondary-action" [disabled]="!isDirty || saving" (click)="discard()">Descartar</button><button type="submit" class="save-action" [disabled]="!isDirty || saving">{{ saving ? 'Guardando…' : 'Guardar cambios' }}</button></div></footer>
+  </form>
+}

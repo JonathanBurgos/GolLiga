@@ -11,5 +11,4 @@
     <p>Elige una competencia para consultar sus equipos, fixture, resultados y estadísticas.</p>
   </header>
   @if(tournaments$|async;as tournaments){<section class="list" aria-label="Torneos disponibles">@for (tournament of tournaments; track tournament.id) {<gl-tournament-card [tournament]="tournament" />}@empty{<div class="empty-state"><h2>No hay torneos disponibles</h2><p>Cuando se publique un torneo, aparecerá aquí.</p><a routerLink="/admin/acceso">Inicia sesión para administrar</a></div>}</section>}
-  <p class="note">La información de esta página se carga desde la base de datos.</p>
 </main>

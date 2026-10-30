@@ -1,5 +1,5 @@
 import { ConflictError, NotFoundError } from '../../domain/common/domain-error.js';
-import { TournamentRepository } from '../../domain/tournaments/tournament.repository.js';
+import { TournamentRepository, TournamentRulesInput } from '../../domain/tournaments/tournament.repository.js';
 
 export class TournamentService {
   constructor(private readonly tournaments: TournamentRepository) {}
@@ -19,6 +19,14 @@ export class TournamentService {
   async update(id: string, input: Parameters<TournamentRepository['update']>[1]) {
     await this.get(id);
     return this.tournaments.update(id, input);
+  }
+  async getRules(id: string) {
+    await this.get(id);
+    return this.tournaments.getOrCreateRules(id);
+  }
+  async updateRules(id: string, input: TournamentRulesInput) {
+    await this.get(id);
+    return this.tournaments.updateRules(id, input);
   }
   async remove(id: string) {
     await this.get(id);

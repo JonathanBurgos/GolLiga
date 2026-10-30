@@ -35,7 +35,7 @@ export class AdminSessionService {
     return this.restoreRequest;
   }
 
-  signIn(email: string, password: string): Observable<AdminRole | null> {
+  signIn(email: string, password: string): Observable<AdminRole> {
     return this.http.post<LoginResponse>(`${environment.apiUrl}/auth/login`, { email, password }).pipe(
       tap(response => localStorage.setItem(TOKEN_KEY, response.accessToken)),
       map(response => response.user.role === 'ADMINISTRADOR' ? 'Administrador' as const : 'Gestor' as const),
@@ -43,7 +43,6 @@ export class AdminSessionService {
         this.currentRole.next(role);
         this.restoreRequest = null;
       }),
-      catchError(() => of(null))
     );
   }
 

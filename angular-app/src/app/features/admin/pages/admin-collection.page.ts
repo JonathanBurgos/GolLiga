@@ -77,11 +77,14 @@ export class AdminCollectionPage {
   edit(record:AdminRecord):void{if(this.editingId===record.id){this.editingId=null;return;}this.editingId=record.id;this.editName=record.name;}
   saveName(key:AdminSectionKey,id:string):void{this.workspace.rename(key,id,this.editName);this.editingId=null;}
   toggle(key:AdminSectionKey,id:string):void{this.workspace.toggleStatus(key,id);}
-  async   remove(key:AdminSectionKey,id:string,name='este registro'):Promise<void>{
+  async remove(key:AdminSectionKey,id:string,name='este registro'):Promise<void>{
     const noun=sections[key].singular;
+    const teamWarning=key==='equipos'
+      ?' También se eliminarán todos sus jugadores registrados. No se eliminarán equipos vinculados a partidos o registros históricos.'
+      :'';
     const confirmed=await this.confirmations.confirm({
       title:`¿Eliminar ${noun}?`,
-      message:`Se eliminará «${name}». Esta acción no se puede deshacer.`,
+      message:`Se eliminará «${name}».${teamWarning} Esta acción no se puede deshacer.`,
       confirmLabel:'Eliminar',
       tone:'danger'
     });

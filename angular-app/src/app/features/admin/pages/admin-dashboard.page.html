@@ -1,6 +1,152 @@
-<header class="page-head"><div><span class="eyebrow">PANEL DEL ORGANIZADOR</span><h1>Resumen del torneo</h1><p>Indicadores basados en la información registrada.</p></div><a class="outline-action" routerLink="/torneos">Ver sitio público <span aria-hidden="true">↗</span></a></header>
-@if(metrics$|async;as metrics){<section class="metrics" aria-label="Indicadores"><article class="metric-card"><small>TORNEOS</small><strong>{{metrics.tournaments}}</strong><span>Registrados</span></article><article class="metric-card"><small>EQUIPOS</small><strong>{{metrics.teams}}</strong><span>Inscritos</span></article><article class="metric-card"><small>JUGADORES</small><strong>{{metrics.players}}</strong><span>En plantilla</span></article><article class="metric-card"><small>PARTIDOS</small><strong>{{metrics.matches}}</strong><span>{{metrics.pending}} pendientes</span></article></section>}
-<div class="dashboard-grid"><section class="panel"><header class="panel-head"><div><span class="eyebrow">TORNEO</span><h2>Próximos partidos</h2></div><a routerLink="/admin/fixture">Ver fixture →</a></header>@if(fixture$|async;as fixtures){@for(match of fixtures.slice(0,3);track match.id){<div class="result-row"><small>{{match.detail}}</small><strong>{{match.name}}</strong><span>{{match.status}}</span></div>}@empty{<p class="empty-state">No hay partidos registrados.</p>}}</section>
-<section class="panel"><header class="panel-head"><div><span class="eyebrow">COMPETICIÓN</span><h2>Últimos resultados</h2></div><a routerLink="/admin/resultados">Ver resultados →</a></header>@if(results$|async;as results){@for(result of results.slice(0,4);track result.id){<div class="result-row"><small>{{result.detail}}</small><strong>{{result.name}}</strong><span>{{result.score}}</span></div>}@empty{<p class="empty-state">Todavía no hay resultados publicados.</p>}}</section>
-<section class="panel"><header class="panel-head"><div><span class="eyebrow">TABLA OFICIAL</span><h2>Posiciones</h2></div><a routerLink="/admin/posiciones">Ver tabla →</a></header>@if(standings$|async;as rows){@for(row of rows.slice(0,5);track row.id){<div class="result-row"><strong>{{row.name}}</strong><span>{{row.status}}</span></div>}@empty{<p class="empty-state">Las posiciones aparecerán al registrar equipos y partidos.</p>}}</section>
-<section class="panel"><header class="panel-head"><div><span class="eyebrow">ESTADÍSTICAS</span><h2>Goleadores</h2></div><a routerLink="/admin/estadisticas">Ver estadísticas →</a></header>@if(leaders$|async;as rows){@for(row of rows.slice(0,5);track row.id){<div class="result-row"><strong>{{row.name}}</strong><small>{{row.detail}}</small><span>{{row.status}}</span></div>}@empty{<p class="empty-state">Aún no se han registrado goles.</p>}}</section></div>
+@if (dashboard$ | async; as data) {
+  <header class="page-head">
+    <div>
+      <span class="eyebrow">{{ data.tournament.competition }} · TEMPORADA {{ data.tournament.season }}</span>
+      <h1>Resumen del torneo</h1>
+      <p>Fase de grupos · {{ data.played }} partidos completados de {{ data.matches.length }}</p>
+    </div>
+    <a class="outline-action" routerLink="/admin/fixture">Programar partido <span aria-hidden="true">→</span></a>
+  </header>
+
+  @if (nextMatch(data.matches); as match) {
+    <section class="featured-match" aria-label="Próximo partido">
+      <div class="match-main">
+        <div class="match-schedule">
+          <span class="match-heading">PRÓXIMO PARTIDO</span>
+          <strong>{{ dateLabel(match.scheduledAt) }}</strong>
+          <small>{{ timeLabel(match.scheduledAt) }} · {{ match.venue || 'Cancha sin asignar' }}</small>
+          <small>Jornada {{ match.round }} · {{ match.groupName }}</small>
+        </div>
+        <div class="match-teams">
+          @for (teamId of [match.homeTeamId, match.awayTeamId]; track teamId; let away = $last) {
+            @if (featuredTeam(data.teams, teamId); as team) {
+              <div class="featured-team" [class.away-team]="away">
+                @if (team.crestUrl) {
+                  <img [src]="team.crestUrl" [alt]="'Escudo ' + team.name">
+                } @else {
+                  <span class="crest-fallback" [style.background]="team.primaryColor">{{ team.shortName }}</span>
+                }
+                <strong>{{ team.shortName }}</strong>
+                <small>{{ team.name }}</small>
+              </div>
+            }
+            @if (!away) { <span class="versus">VS</span> }
+          }
+        </div>
+        <div class="match-progress">
+          <span>FASE DE GRUPOS</span>
+          <strong>{{ data.played }} de {{ data.matches.length }} partidos</strong>
+          <div class="progress-track"><i [style.width.%]="data.matches.length ? data.played / data.matches.length * 100 : 0"></i></div>
+          <small>{{ data.pendingMatches }} pendientes · {{ data.groups.length }} grupos</small>
+        </div>
+      </div>
+    </section>
+  } @else {
+    <section class="featured-match featured-empty">
+      <span class="match-heading">PRÓXIMO PARTIDO</span>
+      <h2>Aún no hay partidos programados</h2>
+      <p>Programa el fixture para ver aquí el siguiente encuentro del torneo.</p>
+      <a routerLink="/admin/fixture">Ir al fixture →</a>
+    </section>
+  }
+
+  <section class="metrics" aria-label="Indicadores del torneo">
+    <article class="metric-card"><span class="metric-icon">♧</span><div><small>Equipos inscritos</small><strong>{{ data.teams.length }}</strong><span>{{ data.groups.length }} grupos</span></div></article>
+    <article class="metric-card"><span class="metric-icon">♙</span><div><small>Jugadores</small><strong>{{ data.players }}</strong><span>En plantillas activas</span></div></article>
+    <article class="metric-card"><span class="metric-icon matches-icon">▣</span><div><small>Partidos programados</small><strong>{{ data.matches.length }}</strong><span>{{ data.pendingMatches }} pendientes</span></div></article>
+    <article class="metric-card"><span class="metric-icon matches-icon">✓</span><div><small>Partidos jugados</small><strong>{{ data.played }}</strong><span>{{ playedPercentage(data.played, data.matches.length) }}% del total</span></div></article>
+    <article class="metric-card"><span class="metric-icon pending-icon">◷</span><div><small>Partidos pendientes</small><strong>{{ data.pendingMatches }}</strong><span>Por disputar</span></div></article>
+    <article class="metric-card"><span class="metric-icon goals-icon">⚽</span><div><small>Goles</small><strong>{{ data.goals }}</strong><span>{{ goalsPerMatch(data.goals, data.played) }} por partido</span></div></article>
+    <article class="metric-card"><span class="metric-icon goals-icon">▰</span><div><small>Amarillas</small><strong>{{ data.yellowCards }}</strong><span>En el torneo</span></div></article>
+    <article class="metric-card"><span class="metric-icon pending-icon">▰</span><div><small>Rojas</small><strong>{{ data.redCards }}</strong><span>En el torneo</span></div></article>
+  </section>
+
+  <div class="dashboard-grid">
+    <div class="dashboard-column">
+      <section class="panel standings-panel">
+        <header class="panel-head">
+          <div><span class="eyebrow">TABLA OFICIAL</span><h2>Posiciones</h2></div>
+          <a routerLink="/admin/posiciones">Ver tabla <span>→</span></a>
+        </header>
+        <div class="group-tabs" aria-label="Filtrar tabla por grupo">
+          <button type="button" [class.selected]="selectedGroup === 'Todos'" (click)="selectedGroup = 'Todos'">Todos</button>
+          @for (group of data.groups; track group) {
+            <button type="button" [class.selected]="selectedGroup === group" (click)="selectedGroup = group">{{ group }}</button>
+          }
+        </div>
+        <div class="table-scroll">
+          <table>
+            <thead><tr><th>#</th><th>Equipo</th><th>PJ</th><th>DG</th><th>Forma</th><th>Pts</th></tr></thead>
+            <tbody>
+              @for (row of standings(data); track row.teamId; let position = $index) {
+                <tr [class.qualified]="position < 2">
+                  <td class="position">{{ position + 1 }}</td>
+                  <td><span class="team-cell">
+                    @if (featuredTeam(data.teams, row.teamId); as team) {
+                      @if (team.crestUrl) { <img [src]="team.crestUrl" [alt]="''"> }
+                      @else { <span class="table-crest" [style.background]="team.primaryColor">{{ team.shortName.slice(0, 1) }}</span> }
+                    }
+                    <strong>{{ row.team }}</strong>
+                  </span></td>
+                  <td>{{ row.played }}</td><td [class.positive]="row.goalDifference > 0">{{ row.goalDifference > 0 ? '+' : '' }}{{ row.goalDifference }}</td>
+                  <td><span class="form">@for (result of row.form; track $index) { <i class="form-dot" [class.draw]="result === 'draw'" [class.loss]="result === 'loss'"></i> } @empty { <span class="form-empty">—</span> }</span></td>
+                  <td class="points">{{ row.points }}</td>
+                </tr>
+              } @empty {
+                <tr><td colspan="6" class="table-empty">Registra equipos para comenzar la clasificación.</td></tr>
+              }
+            </tbody>
+          </table>
+        </div>
+        <p class="table-legend"><span><i class="legend-qualified"></i> Clasificación a octavos (1.º y 2.º de cada grupo)</span></p>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head"><div><span class="eyebrow">COMPETICIÓN</span><h2>Últimos resultados</h2></div><a routerLink="/admin/resultados">Ver resultados <span>→</span></a></header>
+        <div class="recent-results">
+          @for (match of recentResults(data.matches); track match.id) {
+            <div class="recent-result">
+              <strong>{{ match.homeTeam }}</strong><span class="result-score">{{ match.homeScore }} – {{ match.awayScore }}</span><strong>{{ match.awayTeam }}</strong>
+              <small>{{ dateLabel(match.scheduledAt) }} · Grupo {{ match.groupName }}</small>
+            </div>
+          } @empty {
+            <p class="empty-state">Todavía no hay resultados publicados.</p>
+          }
+        </div>
+      </section>
+    </div>
+
+    <div class="dashboard-column">
+      <section class="panel">
+        <header class="panel-head"><div><span class="eyebrow">ESTADÍSTICAS</span><h2>Máximos goleadores</h2></div><a routerLink="/admin/estadisticas">Ver todos <span>→</span></a></header>
+        <div class="leader-list">
+          @for (leader of data.scorers.slice(0, 3); track leader.playerId; let position = $index) {
+            <div class="leader-row"><span class="leader-rank">{{ position + 1 }}</span><span class="leader-avatar">{{ leader.name.slice(0, 1) }}</span><span class="leader-copy"><strong>{{ leader.name }}</strong><small>{{ leader.team }}</small></span><b class="goal-count">{{ leader.goals }}</b></div>
+          } @empty { <p class="empty-state">Aún no se han registrado goles.</p> }
+        </div>
+      </section>
+
+      <section class="panel">
+        <header class="panel-head"><div><span class="eyebrow">ATENCIÓN</span><h2>Por revisar</h2></div><a routerLink="/admin/fixture">Ir al fixture <span>→</span></a></header>
+        <div class="review-list">
+          @for (match of missingVenue(data.matches); track match.id) {
+            <a class="review-row" routerLink="/admin/fixture"><i class="review-symbol">!</i><span><strong>Partido sin cancha</strong><small>Jornada {{ match.round }} · Grupo {{ match.groupName }}</small></span><b>Revisar</b></a>
+          }
+          @for (match of inProgress(data.matches); track match.id) {
+            <a class="review-row" routerLink="/admin/planilla"><i class="review-symbol red">!</i><span><strong>Resultado sin confirmar</strong><small>{{ match.homeTeam }} · {{ match.awayTeam }}</small></span><b>Revisar</b></a>
+          }
+          @if (!missingVenue(data.matches).length && !inProgress(data.matches).length) {
+            <p class="empty-state">No hay pendientes por revisar.</p>
+          }
+        </div>
+      </section>
+    </div>
+  </div>
+} @else {
+  <section class="dashboard-empty">
+    <span class="eyebrow">PANEL DEL ORGANIZADOR</span>
+    <h1>No hay torneos para mostrar</h1>
+    <p>Crea un torneo para comenzar a ver sus partidos, posiciones y estadísticas.</p>
+    <a class="outline-action" routerLink="/admin/torneos/nuevo">Crear torneo <span aria-hidden="true">→</span></a>
+  </section>
+}

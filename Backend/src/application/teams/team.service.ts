@@ -1,4 +1,4 @@
-import { ConflictError, NotFoundError } from '../../domain/common/domain-error.js';
+import { NotFoundError } from '../../domain/common/domain-error.js';
 import { TeamRepository } from '../../domain/teams/team.repository.js';
 import { TournamentRepository } from '../../domain/tournaments/tournament.repository.js';
 
@@ -26,7 +26,6 @@ export class TeamService {
   async remove(id: string) {
     const team = await this.teams.findById(id);
     if (!team) throw new NotFoundError('El equipo');
-    if (team.players?.length) throw new ConflictError('No puedes eliminar un equipo que tiene jugadores registrados.');
     await this.teams.remove(id);
   }
 }
